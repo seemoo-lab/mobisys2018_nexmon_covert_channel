@@ -1,0 +1,298 @@
+--- ../gen/ucode.asm	2018-04-01 20:31:59.994797845 +0200
++++ ucode-forgedack-message-sctr-loop.asm	2018-04-01 20:32:07.103227393 +0200
+@@ -3,0 +4,93 @@
++#include "../include/macros.inc"
++#define PHY_HDR_EARLY 
++#define SPR_SamplePlayStartPtr spr0ad
++#define SPR_SamplePlayStopPtr spr0ae
++#define ARM_START [SHM(0x1390)]
++#define ARM_LENGTH [SHM(0x1392)]
++#define ARM_MSG1_OF_6 [SHM(0x1394)]
++#define ARM_MSG2_OF_6 [SHM(0x1396)]
++#define ARM_MSG3_OF_6 [SHM(0x1398)]
++#define ARM_MSG4_OF_6 [SHM(0x139A)]
++#define ARM_MSG5_OF_6 [SHM(0x139C)]
++#define ARM_MSG6_OF_6 [SHM(0x139E)]
++#define ARM_STOP [SHM(0x13A0)]
++#define ADDR_ARM_MSG1_OF_6 SHM(0x1394)
++#define ARM_MESSAGES 6
++#define SPARE1 r54
++#define SPARE2 r55
++#define V5_RFSEQ_MODE r56
++#define V6_VAL r57
++#define SPINNING r58
++#define TRANS_PREPARED [SHM(0x1340)]
++#define ENABLED [SHM(0x1342)]
++#define LETTER_STATE [SHM(0x1344)]
++#define CHECK_SCTR [SHM(0x1346)]
++#define SPINDONE [SHM(0x1350)]
++#define WAITING [SHM(0x1352)]
++#define WAITTIME [SHM(0x1354)]
++#define TIME_AT_ACK_START [SHM(0x1356)]
++#define SENDACK [SHM(0x1358)]
++#define PKTRECEIVED [SHM(0x135A)]
++#define SUPERDONE [SHM(0x1360)]
++#define FORCE [SHM(0x1370)]
++#define SPR_PHY_HDR_OLD_VAL [SHM(0x1372)]
++#define WORKING [SHM(0x1380)]
++#define ACKTIMEOUT_DEFAULT 90
++#define ACKTIMEOUT [SHM(0x1382)]
++#define ALLRXED [SHM(0x1384)]
++#define PTRS_KEEP [SHM(0x1386)]
++#define PTRS_ADVN [SHM(0x1388)]
++#define OLD_COUNTER [SHM(0x138A)]
++#define TX_COMMAND_SINGLE ((1 << 12) | (1 << 11) | (1 << 1))
++#define TX_COMMAND_FOREVER ((1 << 11) | (1 << 1))
++#define ACPHY_macbasedDACPlay 0x471
++#define macbasedDACPlay_enable 1
++#define macBasedDACPlayMode_20MHZ 2
++#define ACPHY_RfseqMode 0x400
++#define ACPHY_RfseqTrigger 0x402
++#define ACPHY_RfseqStatus0 0x403
++#define ACPHY_sampleCmd 0x460
++#define ACPHY_BBConfig 0x1
++#define ACPHY_BBConfig_resetCCA (1 << 14)
++#define INC(counter) \
++ add counter, 1, counter
++#define COUNTER1 [SHM(0x13A2)]
++#define COUNTER2 [SHM(0x13A2)]
++#define COUNTER3 [SHM(0x13A2)]
++#define COUNTER4 [SHM(0x13A2)]
++#define COUNTER5 [SHM(0x13A2)]
++#define COUNTER6 [SHM(0x13A2)]
++#define COUNTER7 [SHM(0x13A2)]
++#define COUNTER8 [SHM(0x13A2)]
++#define COUNTER9 [SHM(0x13A2)]
++#define COUNTER10 [SHM(0x13A2)]
++#define COUNTER11 [SHM(0x13A2)]
++#define COUNTER12 [SHM(0x13A2)]
++#define COUNTER13 [SHM(0x13A2)]
++#define COUNTER14 [SHM(0x13A2)]
++#define COUNTER15 [SHM(0x13A2)]
++#define phy_reg_read_to_shm(addr,target) \
++ mov addr, r33 \
++ calls L52 \
++ or SPR_Ext_IHR_Data, 0x0, [target]
++#define phy_reg_write(addr,value) \
++ mov addr, r33 \
++ mov value, r34 \
++ calls L54
++#define RX_HDR_LEN 32
++#define RX_HDR_BASE 0x8c0
++#define RX_HDR_OFFSET(off) (RX_HDR_BASE + off)
++#define RX_HDR_RxFrameSize RX_HDR_OFFSET(0)
++#define RX_HDR_NexmonExt RX_HDR_OFFSET(1)
++#define RX_HDR_PhyRxStatus_0 RX_HDR_OFFSET(2)
++#define RX_HDR_PhyRxStatus_1 RX_HDR_OFFSET(3)
++#define RX_HDR_PhyRxStatus_2 RX_HDR_OFFSET(4)
++#define RX_HDR_PhyRxStatus_3 RX_HDR_OFFSET(5)
++#define RX_HDR_PhyRxStatus_4 RX_HDR_OFFSET(6)
++#define RX_HDR_PhyRxStatus_5 RX_HDR_OFFSET(7)
++#define RX_HDR_RxStatus1 RX_HDR_OFFSET(8)
++#define RX_HDR_RxStatus2 RX_HDR_OFFSET(9)
++#define RX_HDR_RxTSFTime RX_HDR_OFFSET(10)
++#define RX_HDR_RxChan RX_HDR_OFFSET(11)
++#define D11AC_M_SMPL_COL_BMP 0x3c9
++#define D11AC_M_SMPL_COL_CTL 0x3ca
+@@ -12,0 +106,6 @@
++ jzx 0, 0, [0x8bf], 0, skip+
++ or 0x2, 0x0, [RX_HDR_RxFrameSize]
++ mov RX_HDR_BASE, SPR_RXE_RXHDR_OFFSET
++ calls L798
++ mov 0, [0x8bf]
++skip:
+@@ -30 +128,0 @@
+- nap
+@@ -38 +136,66 @@
+- nap2
++ je WAITING, 1, keep_spinning+
++ je SPINNING, 1, skip+
++ je FORCE, 0, skip+
++ mov SPR_PHY_HDR_Parameter, SPR_PHY_HDR_OLD_VAL
++ calls prepare_transmission
++#ifdef PHY_HDR_EARLY
++ mov TX_COMMAND_SINGLE, SPARE1
++ mov SPARE1, SPR_PHY_HDR_Parameter
++#endif
++ add TRANS_PREPARED, 1, TRANS_PREPARED
++ mov 0, FORCE
++skip:
++ add WORKING, 1, WORKING
++ je SPINNING, 0, keep_spinning+
++ mov ACPHY_RfseqStatus0, r33
++ calls L52
++ jnzxh SPR_Ext_IHR_Data & 0x1, keep_spinning+
++ mov ACPHY_RfseqMode, r33
++ mov V5_RFSEQ_MODE, r34
++ calls L54
++ mov 0x19e, r33
++ mov V6_VAL, r34
++ calls L54
++ mov 0, SPINNING
++ add SPINDONE, 1, SPINDONE
++ add SPR_TSF_WORD0, 2, SPARE1
++luppa:
++ jne SPR_TSF_WORD0, SPARE1, luppa-
++#ifndef PHY_HDR_EARLY
++ mov TX_COMMAND_SINGLE, SPARE1
++ mov SPARE1, SPR_PHY_HDR_Parameter
++#endif
++ mov 1, WAITING
++ mov SPR_TSF_WORD0, TIME_AT_ACK_START
++keep_spinning:
++ je WAITING, 0, exit_wait+
++ sub SPR_TSF_WORD0, TIME_AT_ACK_START, SPARE1
++ mov ACKTIMEOUT, SPARE2
++ jne SPARE2, 0, donotsetdefault
++ mov ACKTIMEOUT_DEFAULT, SPARE2
++donotsetdefault:
++ jl SPARE1, SPARE2, exit_wait+
++ mov 0, WAITING
++ add SUPERDONE, 1, SUPERDONE
++ mov ACPHY_sampleCmd, r33
++ calls L52
++ mov 0xFFFB, SPARE1
++ and SPR_Ext_IHR_Data, SPARE1, r34
++ calls L54
++ mov 6, SPARE1
++ mov SPARE1, SPR_PHY_HDR_Parameter
++ mov ACPHY_BBConfig, r33
++ calls L52
++ mov SPR_Ext_IHR_Data, SPARE1
++ mov ACPHY_BBConfig_resetCCA, r34
++ or r34, SPARE1, r34
++ calls L54
++ add SPR_TSF_WORD0, 2, SPARE2
++luppa:
++ jne SPR_TSF_WORD0, SPARE2, luppa-
++ mov (! ACPHY_BBConfig_resetCCA), r34
++ and r34, SPARE1, r34
++ calls L54
++ mov SPR_PHY_HDR_OLD_VAL, SPARE1
++ mov SPARE1, SPR_PHY_HDR_Parameter
++exit_wait:
+@@ -174,0 +338 @@
++ INC(COUNTER1)
+@@ -509,0 +674 @@
++ INC(COUNTER2)
+@@ -510,0 +676 @@
++ INC(COUNTER3)
+@@ -515,0 +682 @@
++ INC(COUNTER4)
+@@ -522,0 +690 @@
++ INC(COUNTER15)
+@@ -724,0 +893 @@
++ INC(COUNTER5)
+@@ -744,0 +914 @@
++ INC(COUNTER6)
+@@ -747,0 +918 @@
++ INC(COUNTER7)
+@@ -762,0 +934 @@
++ INC(COUNTER8)
+@@ -765,0 +938 @@
++ INC(COUNTER9)
+@@ -1293,0 +1467 @@
++ INC(COUNTER10)
+@@ -1373,0 +1548 @@
++ INC(COUNTER11)
+@@ -2708,0 +2884 @@
++ mov 0, SENDACK
+@@ -2853,0 +3030,28 @@
++#define SPIN_LENGTH (6 + 24 + 2 + 8 + 20 + 8)
++#define MIN_LENGTH 10
++spin_rx_header:
++ jext COND_RX_COMPLETE, spin_rx_end
++ jl SPR_RXE_FRAMELEN, SPIN_LENGTH, spin_rx_header
++spin_rx_end:
++ jl SPR_RXE_FRAMELEN, MIN_LENGTH, skip+
++#define TYPE_QOS_DATA 0x88
++#define TYPE_NOQOS_DATA 0x08
++#define TYPE_BEACON 0x80
++#define TYPE_ACK 0xd4
++ add ALLRXED, 1, ALLRXED
++ and [3,off1], 0xff, SPARE1
++ je SPARE1, TYPE_QOS_DATA, process_mac
++ je SPARE1, TYPE_NOQOS_DATA, process_mac
++ jmp skip+
++process_mac:
++ mov 0x1100, SPARE1
++ jne [5,off1], SPARE1, skip+
++ mov 0x3322, SPARE1
++ jne [6,off1], SPARE1, skip+
++ mov 0x5544, SPARE1
++ jne [7,off1], SPARE1, skip+
++ jext COND_RX_COMPLETE, skip+
++ add PKTRECEIVED, 1, PKTRECEIVED
++ je ENABLED, 0, skip+
++ mov 1, SENDACK
++skip:
+@@ -3370,0 +3575 @@
++ je SENDACK, 1, need_forged_ack
+@@ -3374,0 +3580,28 @@
++need_forged_ack:
++ mov 0, SENDACK
++ mov 0, FORCE
++ je ARM_START, 0, skip_setup
++ mov [14,off1], SPARE1
++ je CHECK_SCTR, 0, do_not_revert
++ jne SPARE1, OLD_COUNTER, do_not_revert
++ je LETTER_STATE, 0, do_not_revert
++ sub LETTER_STATE, 1, LETTER_STATE
++do_not_revert:
++ mov SPARE1, OLD_COUNTER
++ jl LETTER_STATE, ARM_MESSAGES, do_not_stop
++ mov 0, ARM_STOP
++ mov 1, ARM_START
++ mov 0, LETTER_STATE
++ jmp skip_setup
++do_not_stop:
++ mov SPR_BASE0, SPARE2
++ mov ADDR_ARM_MSG1_OF_6, SPR_BASE0
++ add LETTER_STATE, SPR_BASE0, SPR_BASE0
++ mov [0,off0], SPARE1
++ mov SPARE1, SPR_SamplePlayStartPtr
++ add ARM_LENGTH, SPARE1, SPR_SamplePlayStopPtr
++ mov SPARE2, SPR_BASE0
++ add LETTER_STATE, 1, LETTER_STATE
++ mov 1, FORCE
++skip_setup:
++ jmp L604
+@@ -3530,0 +3764 @@
++ mov RX_HDR_BASE, SPR_RXE_RXHDR_OFFSET
+@@ -4474,2 +4708 @@
+- mov 0x840, SPR_RXE_RXHDR_OFFSET
+- mov 0xE, SPR_RXE_RXHDR_LEN
++ mov RX_HDR_LEN, SPR_RXE_RXHDR_LEN
+@@ -5572,0 +5806 @@
++ INC(COUNTER12)
+@@ -5698,0 +5933 @@
++ INC(COUNTER13)
+@@ -6388,0 +6624 @@
++ INC(COUNTER14)
+@@ -6933,0 +7170,26 @@
++ rets
++prepare_transmission:
++ mov ACPHY_macbasedDACPlay, r33
++ calls L52
++ mov SPR_Ext_IHR_Data, SPARE1
++ or SPARE1, (macbasedDACPlay_enable | macBasedDACPlayMode_20MHZ), r34
++ calls L54
++ mov ACPHY_RfseqMode, r33
++ calls L52
++ mov SPR_Ext_IHR_Data, V5_RFSEQ_MODE
++ mov 0x19E, r33
++ calls L52
++ mov SPR_Ext_IHR_Data, V6_VAL
++ or V6_VAL, 1, r34
++ calls L54
++ mov ACPHY_RfseqMode, r33
++ calls L52
++ mov SPR_Ext_IHR_Data, SPARE1
++ or SPARE1, 3, r34
++ calls L54
++ mov ACPHY_RfseqTrigger, r33
++ calls L52
++ mov SPR_Ext_IHR_Data, SPARE1
++ or SPARE1, 1, r34
++ calls L54
++ mov 1, SPINNING

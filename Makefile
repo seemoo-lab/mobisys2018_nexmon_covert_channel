@@ -15,7 +15,7 @@ endif
 ADBSERIAL := 
 ADBFLAGS := $(ADBSERIAL)
 
-UCODEFILE=ucode.asm
+UCODEFILE=ucode-forgedack-message-sctr.asm
 
 OBJS=$(addprefix obj/,$(notdir $(LOCAL_SRCS:.c=.o)) $(notdir $(COMMON_SRCS:.c=.o)) $(notdir $(FW_SRCS:.c=.o)))
 

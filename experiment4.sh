@@ -1,0 +1,8 @@
+#!/system/bin/sh
+
+matlabframe_nonht_0_1111_exp4.sh
+matlabframe_nonht_0_1011_exp4.sh
+matlabframe_nonht_0_0100_exp4.sh
+matlabframe_nonht_0_0010_exp4.sh
+matlabframe_nonht_0_1110_exp4.sh
+matlabframe_nonht_0_0111_exp4.sh
